@@ -1808,7 +1808,7 @@ client.on('messageCreate', async message => {
 
 // Minimal Express server for Render.com port scan
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8081;
 
 // Basic health check endpoint
 app.get('/', (req, res) => {
@@ -1851,7 +1851,6 @@ app.use((err, req, res, next) => {
   res.status(500).send('Internal Server Error');
 });
 
-const PORT = process.env.PORT || 8081;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
