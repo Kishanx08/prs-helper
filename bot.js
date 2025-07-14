@@ -379,7 +379,7 @@ const commands = [
 ];
 
 // Validate environment
-const REQUIRED_ENV = ['DISCORD_TOKEN', 'GOOGLE_SERVICE_ACCOUNT_JSON', 'MONGO_URI'];
+const REQUIRED_ENV = ['DISCORD_TOKEN', 'GOOGLE_SERVICE_ACCOUNT_BASE64', 'MONGO_URI'];
 REQUIRED_ENV.forEach(variable => {
   if (!process.env[variable]) throw new Error(`Missing ${variable} in .env`);
 });
