@@ -1851,8 +1851,9 @@ app.use((err, req, res, next) => {
   res.status(500).send('Internal Server Error');
 });
 
-app.listen(PORT, () => {
-  console.log(`Express server listening on port ${PORT}`);
+const PORT = process.env.PORT || 8081;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Ensure the bot logs in
