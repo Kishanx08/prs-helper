@@ -1833,6 +1833,7 @@ app.post('/send-otp', async (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Express error:', err);
+  console.log(serviceAccount.client_email);
   res.status(500).send('Internal Server Error');
 });
 
