@@ -410,8 +410,9 @@ const client = new Client({
 
 // Google Sheets setup
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly', 'https://www.googleapis.com/auth/drive.readonly'];
-const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-const serviceAccount = JSON.parse(raw.replace(/\\n/g, '\n'));
+const rawJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+const fixedJson = rawJson.replace(/\\n/g, '\n');
+const serviceAccount = JSON.parse(fixedJson);
 
 // MongoDB setup
 const mongoClient = new MongoClient(process.env.MONGO_URI, {
