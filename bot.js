@@ -407,12 +407,27 @@ const client = new Client({
     Partials.Reaction
   ]
 });
-
 // Google Sheets setup
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly', 'https://www.googleapis.com/auth/drive.readonly'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'https://www.googleapis.com/auth/drive.readonly',
+];
+
 const rawJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-const fixedJson = rawJson.replace(/\\n/g, '\n');
-const serviceAccount = JSON.parse(fixedJson);
+const fixedJson = rawJson?.replace(/\\n/g, '\n');
+
+console.log("Raw JSON env:", rawJson?.slice(0, 100)); // print first 100 characters
+console.log("Fixed JSON preview:", fixedJson?.slice(0, 100)); // after \n replacement
+
+let serviceAccount;
+
+try {
+  serviceAccount = JSON.parse(fixedJson);
+} catch (err) {
+  console.error("❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:", err.message);
+  process.exit(1); // stop bot if parsing fails
+}
+
 
 // MongoDB setup
 const mongoClient = new MongoClient(process.env.MONGO_URI, {
