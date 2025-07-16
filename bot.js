@@ -361,6 +361,21 @@ const commands = [
         description: 'Discord user to link',
         type: 6, // USER
         required: true
+      },
+      {
+        name: 'role',
+        description: 'Role to assign (case-sensitive)',
+        type: 3, // STRING
+        required: true,
+        choices: [
+          { name: 'Affiliated Agent', value: 'Affiliated Agent' },
+          { name: 'Apprentice Salesman', value: 'Apprentice Salesman' },
+          { name: 'Sales Executive', value: 'Sales Executive' },
+          { name: 'Senior Sales Executive', value: 'Senior Sales Executive' },
+          { name: 'Sales Manager', value: 'Sales Manager' },
+          { name: 'General Manager', value: 'General Manager' },
+          { name: 'Boss', value: 'Boss' }
+        ]
       }
     ]
   },
@@ -373,6 +388,33 @@ const commands = [
         description: 'Discord User ID to remove',
         type: 3, // STRING
         required: true
+      }
+    ]
+  },
+  {
+    name: 'set_employee_role',
+    description: 'Change the role of an existing employee',
+    options: [
+      {
+        name: 'employee_code',
+        description: 'Employee code of the user',
+        type: 3, // STRING
+        required: true
+      },
+      {
+        name: 'role',
+        description: 'New role to assign (case-sensitive)',
+        type: 3, // STRING
+        required: true,
+        choices: [
+          { name: 'Affiliated Agent', value: 'Affiliated Agent' },
+          { name: 'Apprentice Salesman', value: 'Apprentice Salesman' },
+          { name: 'Sales Executive', value: 'Sales Executive' },
+          { name: 'Senior Sales Executive', value: 'Senior Sales Executive' },
+          { name: 'Sales Manager', value: 'Sales Manager' },
+          { name: 'General Manager', value: 'General Manager' },
+          { name: 'Boss', value: 'Boss' }
+        ]
       }
     ]
   },
@@ -1485,9 +1527,26 @@ Total to Pay - $${finalPrice}`;
         const employeeCode = interaction.options.getString('employee_code');
         const name = interaction.options.getString('name');
         const user = interaction.options.getUser('user');
-        if (!employeeCode || !name || !user) {
+        const role = interaction.options.getString('role');
+        const allowedRoles = [
+          'Affiliated Agent',
+          'Apprentice Salesman',
+          'Sales Executive',
+          'Senior Sales Executive',
+          'Sales Manager',
+          'General Manager',
+          'Boss'
+        ];
+        if (!employeeCode || !name || !user || !role) {
           await interaction.reply({
             content: '❌ Missing required fields.',
+            ephemeral: true
+          });
+          break;
+        }
+        if (!allowedRoles.includes(role)) {
+          await interaction.reply({
+            content: `❌ Invalid role. Allowed roles: ${allowedRoles.join(', ')}`,
             ephemeral: true
           });
           break;
@@ -1517,13 +1576,14 @@ Total to Pay - $${finalPrice}`;
                 discordId: user.id,
                 discordUsername: user.tag,
                 isApproved: true,
-                approvalStatus: 'approved'
+                approvalStatus: 'approved',
+                role
               }
             },
             { upsert: true }
           );
           await interaction.reply({
-            content: `✅ Employee ${name} (${employeeCode}) linked to Discord user ${user.tag}.`,
+            content: `✅ Employee ${name} (${employeeCode}) linked to Discord user ${user.tag} with role ${role}.`,
             ephemeral: true
           });
         } catch (err) {
@@ -1582,6 +1642,89 @@ Total to Pay - $${finalPrice}`;
           console.error('Error removing employee:', err);
           await interaction.reply({
             content: '❌ Failed to remove employee. Please try again.',
+            ephemeral: true
+          });
+        }
+        break;
+      }
+      case 'set_employee_role': {
+        // Only allow OWNER_ID or users with high-level roles
+        const allowedRoleChangers = ['Boss', 'General Manager', 'Sales Manager'];
+        let userRole = null;
+        if (mainMongoClient) {
+          if (!mainMongoClient.topology || !mainMongoClient.topology.isConnected()) {
+            await mainMongoClient.connect();
+          }
+          const websiteDb = mainMongoClient.db('test');
+          const usersCollection = websiteDb.collection('users');
+          const invoker = await usersCollection.findOne({ discordId: interaction.user.id });
+          userRole = invoker?.role;
+        }
+        const isAllowed = interaction.user.id === OWNER_ID || allowedRoleChangers.includes(userRole);
+        if (!isAllowed) {
+          await interaction.reply({
+            content: '❌ You are not authorized to use this command.',
+            ephemeral: true
+          });
+          break;
+        }
+        const employeeCode = interaction.options.getString('employee_code');
+        const newRole = interaction.options.getString('role');
+        const allowedRoles = [
+          'Affiliated Agent',
+          'Apprentice Salesman',
+          'Sales Executive',
+          'Senior Sales Executive',
+          'Sales Manager',
+          'General Manager',
+          'Boss'
+        ];
+        if (!employeeCode || !newRole) {
+          await interaction.reply({
+            content: '❌ Missing required fields.',
+            ephemeral: true
+          });
+          break;
+        }
+        if (!allowedRoles.includes(newRole)) {
+          await interaction.reply({
+            content: `❌ Invalid role. Allowed roles: ${allowedRoles.join(', ')}`,
+            ephemeral: true
+          });
+          break;
+        }
+        if (!mainMongoClient) {
+          await interaction.reply({
+            content: '❌ Main MongoDB connection not configured. Please set MONGO_URI_MAIN.',
+            ephemeral: true
+          });
+          break;
+        }
+        try {
+          if (!mainMongoClient.topology || !mainMongoClient.topology.isConnected()) {
+            await mainMongoClient.connect();
+          }
+          const websiteDb = mainMongoClient.db('test');
+          const usersCollection = websiteDb.collection('users');
+          const updateResult = await usersCollection.updateOne(
+            { employeeCode },
+            { $set: { role: newRole } }
+          );
+          if (updateResult.matchedCount === 0) {
+            await interaction.reply({
+              content: `❌ No employee found with code ${employeeCode}.`,
+              ephemeral: true
+            });
+          } else {
+            await interaction.reply({
+              content: `✅ Role for employee ${employeeCode} updated to ${newRole}.`,
+              ephemeral: true
+            });
+          }
+        } catch (err) {
+          console.error('Error updating employee role:', err);
+          await interaction.reply({
+            content: '❌ Failed to update employee role. Please try again.',
             ephemeral: true
           });
         }
